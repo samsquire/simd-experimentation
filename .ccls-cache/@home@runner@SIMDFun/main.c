@@ -1,12 +1,12 @@
 #include <immintrin.h> // portable to all x86 compilers
 #include <stdio.h>
 
-int show(__m256i *vector, char * note) {
+int show(__m256i *vector, char *note) {
   printf("%s\n", note);
   size_t n = sizeof(__m256i);
   printf("%d\n", n);
-  char buffer[n] __attribute__ ((__aligned__(32)));
-  _mm256_store_si256((__m256i*)buffer, *vector);
+  char buffer[n] __attribute__((__aligned__(32)));
+  _mm256_store_si256((__m256i *)buffer, *vector);
   for (int i = 0; i < n; i++) {
     printf("%d ", buffer[i]);
   }
@@ -30,25 +30,39 @@ int main() {
   __m256i cmpvector = _mm256_set_epi8(
       16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16,
       16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16);
-  
+
   show(&cmpvector, "CMP vector");
-  __m256i cmpvector2 = _mm256_set_epi8(8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8);
-  
-  
+  __m256i cmpvector2 =
+      _mm256_set_epi8(8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8,
+                      8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8);
+
   __m256i result = _mm256_cmpeq_epi8(vector5, cmpvector);
   show(&result, "CMP == 16 vector");
 
-    __m256i result2 = _mm256_cmpeq_epi8(vector5, cmpvector2);
+  __m256i result2 = _mm256_cmpeq_epi8(vector5, cmpvector2);
   show(&result2, "CMP == 8 vector");
 
-  result = result << 8;
-  show(&result, "Rotated left");
-  result2 = result2 << 16;
+  __m256i shufflevector =
+      _mm256_set_epi8(8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8,
+                      8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8);
 
-  __m256i result3 = result | result2;
-  show(&result3, "ORed");
   
+
+  //     result = result << 8;
+  // show(&result, "Rotated left");
+  // result2 = result2 << 16;
+
+    int mask = 8;
+    
+      unsigned char buffer[sizeof(__m256i) / sizeof(char)] __attribute__((__aligned__(32)));
+  _mm256_store_si256((__m256i *)buffer, result2);
+    for (int x = 0 ; x < 32 ; x++) {
+      printf("%d %d\n", ((unsigned int) buffer[x]), ((unsigned int) buffer[x]) << mask);
+    }
   
+  // __m256i result3 = result | result2;
+  // show(&result3, "ORed");
+
   // _mm256_cmpgt_epi64
   // __m256 vector4 = _mm256_cmpgt_epi8(a, b, c);
 
