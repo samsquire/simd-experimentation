@@ -1,7 +1,8 @@
 all: main
 
 CC = clang
-override CFLAGS += -g -Wno-everything -pthread -lm -mavx512vl
+override CFLAGS += -g -Wno-everything -pthread -lm -mavx2
+
 
 SRCS = $(shell find . -name '.ccls-cache' -type d -prune -o -type f -name '*.c' -print)
 HEADERS = $(shell find . -name '.ccls-cache' -type d -prune -o -type f -name '*.h' -print)

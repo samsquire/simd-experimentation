@@ -1,3 +1,4 @@
+#include <ctype.h>
 #include <immintrin.h> // portable to all x86 compilers
 #include <stdio.h>
 #include <string.h>
@@ -8,6 +9,11 @@ struct SimdDataParse {
   char *data;
   int datalength;
   char *last_char;
+};
+struct Token {
+  char *string;
+  int value;
+  int length;
 };
 
 int show(__m256i *vector, char *note) {
@@ -41,7 +47,7 @@ char *get_char(struct SimdDataParse *parse) {
   return parse->last_char;
 }
 
-char *parse_token(struct SimdDataParse *parse) {
+struct Token *parse_token(struct SimdDataParse *parse) {
   while (parse->end == 0 && ((strcmp(parse->last_char, "\n") == 0) ||
                              (strcmp(parse->last_char, " ") == 0))) {
     printf("cmpnewline %d\n", strcmp(parse->last_char, "\n"));
@@ -49,7 +55,29 @@ char *parse_token(struct SimdDataParse *parse) {
     get_char(parse);
     printf("consuming empty\n");
   }
-  return parse->last_char;
+  if (isdigit(parse->last_char[0])) {
+    printf("%s", "was a number\n");
+    char *num __attribute__((__aligned__(8))) = malloc(sizeof(char) * 100);
+    printf("size is %d\n", 100);
+    memset(num, 0, 100);
+
+    int pos = 0;
+    struct Token *token = malloc(sizeof(struct Token));
+    token->string = num;
+    token->length = 0;
+    token->value = 0;
+    while (pos < 99 && parse->end == 0 && isdigit(parse->last_char[0])) {
+      printf("%s", "found another number\n");
+      num[pos] = parse->last_char[0];
+
+      get_char(parse);
+      pos++;
+    }
+    token->value = atoi(num);
+    token->length = pos;
+    return token;
+  }
+  return 0;
 }
 
 int main(int argc, char **argv) {
@@ -98,8 +126,19 @@ int main(int argc, char **argv) {
     dataparse->pos = 0;
     dataparse->last_char = " ";
     dataparse->datalength = data_length;
-    char *token = parse_token(dataparse);
-    printf("got token [%s]\n", token);
+    
+    int items = 0;
+    char numbers[32]; 
+    while (dataparse->end == 0 && items < 32) {
+      items++;
+      struct Token *token = parse_token(dataparse);
+      numbers[items++] = token->value;
+      printf("got token [%s]\n", token->string);
+    }
+    __m256i line = _mm256_loadu_si256(&numbers);
+    __m256i added = _mm256_add_epi8(line, line);
+    show(&added, "Added");
+    
     // start to process your data / extract strings here...
   }
   // __m128 vector1 = _mm_set_ps(
