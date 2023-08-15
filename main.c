@@ -34,13 +34,16 @@ char *get_char(struct SimdDataParse *parse) {
   this_char[1] = '\0';
   if (parse->pos + 1 >= parse->datalength) {
     parse->end = 1;
+    this_char[0] = parse->data[parse->pos];
+    parse->last_char = this_char;
+
     return parse->last_char;
   }
 
-  printf("pos%d\n", parse->pos);
+  // printf("pos%d\n", parse->pos);
 
   this_char[0] = parse->data[parse->pos];
-  printf("%s\n", this_char);
+  // printf("%s\n", this_char);
 
   parse->last_char = this_char;
   parse->pos = parse->pos + 1;
@@ -50,15 +53,14 @@ char *get_char(struct SimdDataParse *parse) {
 struct Token *parse_token(struct SimdDataParse *parse) {
   while (parse->end == 0 && ((strcmp(parse->last_char, "\n") == 0) ||
                              (strcmp(parse->last_char, " ") == 0))) {
-    printf("cmpnewline %d\n", strcmp(parse->last_char, "\n"));
-    printf("cmpspace %d\n", strcmp(parse->last_char, " "));
+    // printf("cmpnewline %d\n", strcmp(parse->last_char, "\n"));
+    // printf("cmpspace %d\n", strcmp(parse->last_char, " "));
     get_char(parse);
-    printf("consuming empty\n");
+    // printf("consuming empty\n");
   }
   if (isdigit(parse->last_char[0])) {
-    printf("%s", "was a number\n");
+    // printf("%s", "was a number\n");
     char *num __attribute__((__aligned__(8))) = malloc(sizeof(char) * 100);
-    printf("size is %d\n", 100);
     memset(num, 0, 100);
 
     int pos = 0;
@@ -67,7 +69,7 @@ struct Token *parse_token(struct SimdDataParse *parse) {
     token->length = 0;
     token->value = 0;
     while (pos < 99 && parse->end == 0 && isdigit(parse->last_char[0])) {
-      printf("%s", "found another number\n");
+      // printf("%s", "found another number\n");
       num[pos] = parse->last_char[0];
 
       get_char(parse);
@@ -127,17 +129,23 @@ int main(int argc, char **argv) {
     dataparse->last_char = " ";
     dataparse->datalength = data_length;
     
-    int items = 0;
-    char numbers[32]; 
-    while (dataparse->end == 0 && items < 32) {
-      items++;
-      struct Token *token = parse_token(dataparse);
-      numbers[items++] = token->value;
-      printf("got token [%s]\n", token->string);
+    
+    while (dataparse->end == 0) {
+      int items = 0;
+      char numbers[32]; 
+      while (dataparse->end == 0 && items < 32) {
+        
+        items++;
+        struct Token *token = parse_token(dataparse);
+        numbers[items++] = token->value;
+        // printf("got token [%s]\n", token->string);
+      
     }
     __m256i line = _mm256_loadu_si256(&numbers);
     __m256i added = _mm256_add_epi8(line, line);
+      
     show(&added, "Added");
+      }
     
     // start to process your data / extract strings here...
   }
