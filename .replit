@@ -1,5 +1,7 @@
 compile = ["make", "-s"]
-run = "./main"
+
+
+run = "./main example.simd example.data"
 entrypoint = "main.c"
 hidden = ["main", "main-debug", "**/*.o", "**/*.d", ".ccls-cache", "Makefile"]
 

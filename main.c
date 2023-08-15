@@ -1,5 +1,14 @@
 #include <immintrin.h> // portable to all x86 compilers
 #include <stdio.h>
+#include <string.h>
+
+struct SimdDataParse {
+  int pos;
+  int end;
+  char *data;
+  int datalength;
+  char *last_char;
+};
 
 int show(__m256i *vector, char *note) {
   printf("%s\n", note);
@@ -14,7 +23,85 @@ int show(__m256i *vector, char *note) {
   return 0;
 }
 
-int main() {
+char *get_char(struct SimdDataParse *parse) {
+  char *this_char = malloc(sizeof(char) * 2);
+  this_char[1] = '\0';
+  if (parse->pos + 1 >= parse->datalength) {
+    parse->end = 1;
+    return parse->last_char;
+  }
+
+  printf("pos%d\n", parse->pos);
+
+  this_char[0] = parse->data[parse->pos];
+  printf("%s\n", this_char);
+
+  parse->last_char = this_char;
+  parse->pos = parse->pos + 1;
+  return parse->last_char;
+}
+
+char *parse_token(struct SimdDataParse *parse) {
+  while (parse->end == 0 && ((strcmp(parse->last_char, "\n") == 0) ||
+                             (strcmp(parse->last_char, " ") == 0))) {
+    printf("cmpnewline %d\n", strcmp(parse->last_char, "\n"));
+    printf("cmpspace %d\n", strcmp(parse->last_char, " "));
+    get_char(parse);
+    printf("consuming empty\n");
+  }
+  return parse->last_char;
+}
+
+int main(int argc, char **argv) {
+  printf("%d\n", argc);
+  if (argc < 3) {
+    printf("usage: example.simd example.data\n");
+    exit(0);
+  }
+  char *simdprogram = 0;
+  long length;
+  FILE *f = fopen(argv[0], "r");
+
+  if (f) {
+    fseek(f, 0, SEEK_END);
+    length = ftell(f);
+    fseek(f, 0, SEEK_SET);
+    simdprogram = malloc(length);
+    if (simdprogram) {
+      fread(simdprogram, 1, length, f);
+    }
+    fclose(f);
+  }
+
+  char *simddata = 0;
+  long data_length;
+  FILE *d = fopen(argv[2], "r");
+
+  if (d) {
+    fseek(d, 0, SEEK_END);
+    data_length = ftell(d);
+    fseek(d, 0, SEEK_SET);
+    simddata = malloc(data_length);
+    if (simddata) {
+      fread(simddata, 1, data_length, d);
+    }
+    fclose(d);
+  }
+
+  if (simddata && simdprogram) {
+    printf("got both simd data and program\n");
+    printf("%s\n", simddata);
+    printf("data_length %d\n", data_length);
+    struct SimdDataParse *dataparse = malloc(sizeof(struct SimdDataParse));
+    dataparse->data = simddata;
+    dataparse->end = 0;
+    dataparse->pos = 0;
+    dataparse->last_char = " ";
+    dataparse->datalength = data_length;
+    char *token = parse_token(dataparse);
+    printf("got token [%s]\n", token);
+    // start to process your data / extract strings here...
+  }
   // __m128 vector1 = _mm_set_ps(
   //     4.0, 3.0, 2.0,
   //     1.0); // high element first, opposite of C array order.  Use
@@ -46,20 +133,25 @@ int main() {
       _mm256_set_epi8(8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8,
                       8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8);
 
-  
-
   //     result = result << 8;
   // show(&result, "Rotated left");
   // result2 = result2 << 16;
 
-    int mask = 8;
-    
-      unsigned char buffer[sizeof(__m256i) / sizeof(char)] __attribute__((__aligned__(32)));
+  int mask = 8;
+  int mask2 = 16;
+
+  unsigned char buffer[sizeof(__m256i) / sizeof(char)]
+      __attribute__((__aligned__(32)));
   _mm256_store_si256((__m256i *)buffer, result2);
-    for (int x = 0 ; x < 32 ; x++) {
-      printf("%d %d\n", ((unsigned int) buffer[x]), ((unsigned int) buffer[x]) << mask);
-    }
-  
+  unsigned char buffer2[sizeof(__m256i) / sizeof(char)]
+      __attribute__((__aligned__(32)));
+  _mm256_store_si256((__m256i *)buffer2, result);
+  for (int x = 0; x < 32; x++) {
+    printf("%d %d %d\n", ((unsigned int)buffer[x]),
+           ((unsigned int)buffer[x]) << mask,
+           ((unsigned int)buffer2[x]) << mask2);
+  }
+
   // __m256i result3 = result | result2;
   // show(&result3, "ORed");
 
