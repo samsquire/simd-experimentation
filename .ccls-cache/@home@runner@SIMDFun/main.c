@@ -79,6 +79,7 @@ struct Token *parse_token(struct SimdDataParse *parse) {
     token->length = pos;
     return token;
   }
+  printf("Not a number\n");
   return 0;
 }
 
@@ -121,34 +122,99 @@ int main(int argc, char **argv) {
   if (simddata && simdprogram) {
     printf("got both simd data and program\n");
     printf("%s\n", simddata);
-    printf("data_length %d\n", data_length);
+    printf("data_length %ld\n", data_length);
+    __m256i lines[100];
+    __m256i comparisons[100];
+
+    int linescount = 0;
+    int datacount = 0;
     struct SimdDataParse *dataparse = malloc(sizeof(struct SimdDataParse));
     dataparse->data = simddata;
     dataparse->end = 0;
     dataparse->pos = 0;
     dataparse->last_char = " ";
     dataparse->datalength = data_length;
-    
-    
+    char numbers[32];
     while (dataparse->end == 0) {
       int items = 0;
-      char numbers[32]; 
+
       while (dataparse->end == 0 && items < 32) {
-        
-        items++;
+
         struct Token *token = parse_token(dataparse);
-        numbers[items++] = token->value;
+
+        
+
+        numbers[items] = (char)token->value;
+        items++;
+
         // printf("got token [%s]\n", token->string);
+      }
+      __m256i line = _mm256_loadu_si256(numbers);
+      printf("linescount %d\n", linescount);
+      lines[datacount] = line;
+      // __m256i added = _mm256_add_epi8(line, line);
+
+      // show(&added, "Added");
+
+      __m256i cmpvector2 =
+          _mm256_set_epi8(8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8,
+                          8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8);
+      show(&cmpvector2, "Compare vector2");
+
+      __m256i cmpvector3 =
+          _mm256_set_epi8(15, 15, 15, 15, 15, 15, 15, 15, 15, 15, 15, 15, 15, 15, 15, 15, 15, 15,
+                          15, 15, 15, 15, 15, 15, 15, 15, 15, 15, 15, 15, 15, 15);
+      show(&cmpvector3, "Compare vector3");
+
+      int mask = 8;
+      int mask2 = 16;
+
+      comparisons[linescount++] = _mm256_cmpeq_epi8(line, cmpvector2);
+      comparisons[linescount++] = _mm256_cmpeq_epi8(line, cmpvector3);
       
+      datacount++;
     }
-    __m256i line = _mm256_loadu_si256(&numbers);
-    __m256i added = _mm256_add_epi8(line, line);
-      
-    show(&added, "Added");
+
+    for (int x = 0; x < linescount; x++) {
+      printf("Comparison for %d\n", x);
+      show(&comparisons[x], "Comparison");
+      unsigned char buffer[sizeof(__m256i) / sizeof(unsigned char)]
+          __attribute__((__aligned__(32)));
+      _mm256_store_si256((__m256i *)buffer, comparisons[x]);
+  
+printf("Mask response\n");
+      for (int y = 0; y < 32; y++) {
+        char result = 0;
+         if (buffer[y] == 255) {
+           result = 1 << x;
+         }
+         printf("%d ", result);
       }
     
-    // start to process your data / extract strings here...
+    printf("\n");
+      printf("\n");
   }
+  }
+  __m256i offset = _mm256_set_epi64x(8, 8, 8, 8);
+  __m256i memresult = _mm256_add_epi64(offset, offset);
+
+  // accessing an object key in assembly
+  /*
+  hashmap->key[hsh].len = key_length;
+  276f: 48 8b 4d e8           mov    -0x18(%rbp),%rcx
+  2773: 48 8b 55 f8           mov    -0x8(%rbp),%rdx
+  2777: 48 89 d0              mov    %rdx,%rax
+  277a: 48 c1 e0 08           shl    $0x8,%rax
+  277e: 48 01 d0              add    %rdx,%rax
+  2781: 48 c1 e0 02           shl    $0x2,%rax
+  2785: 48 01 c8              add    %rcx,%rax
+  2788: 48 8d 90 04 04 00 00  lea    0x404(%rax),%rdx
+  278f: 8b 45 d4              mov    -0x2c(%rbp),%eax
+  2792: 89 02                 mov    %eax,(%rdx)
+    */
+
+  // start to process your data / extract strings here...
+
   // __m128 vector1 = _mm_set_ps(
   //     4.0, 3.0, 2.0,
   //     1.0); // high element first, opposite of C array order.  Use
@@ -183,21 +249,6 @@ int main(int argc, char **argv) {
   //     result = result << 8;
   // show(&result, "Rotated left");
   // result2 = result2 << 16;
-
-  int mask = 8;
-  int mask2 = 16;
-
-  unsigned char buffer[sizeof(__m256i) / sizeof(char)]
-      __attribute__((__aligned__(32)));
-  _mm256_store_si256((__m256i *)buffer, result2);
-  unsigned char buffer2[sizeof(__m256i) / sizeof(char)]
-      __attribute__((__aligned__(32)));
-  _mm256_store_si256((__m256i *)buffer2, result);
-  for (int x = 0; x < 32; x++) {
-    printf("%d %d %d\n", ((unsigned int)buffer[x]),
-           ((unsigned int)buffer[x]) << mask,
-           ((unsigned int)buffer2[x]) << mask2);
-  }
 
   // __m256i result3 = result | result2;
   // show(&result3, "ORed");
