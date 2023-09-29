@@ -153,7 +153,7 @@ int main(int argc, char **argv) {
       }
       __m256i line = _mm256_loadu_si256(numbers);
       printf("linescount %d\n", linescount);
-      lines[datacount] = line;
+      lines[datacount++] = line;
       // __m256i added = _mm256_add_epi8(line, line);
 
       // show(&added, "Added");
@@ -181,7 +181,7 @@ int main(int argc, char **argv) {
       comparisons[linescount++] = _mm256_cmpeq_epi8(line, cmpvector2);
       comparisons[linescount++] = _mm256_cmpeq_epi8(line, cmpvector3);
 
-      datacount++;
+      
 
       for (int x = 0; x < linescount; x++) {
         printf("Comparison for %d\n", x);
