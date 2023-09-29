@@ -2,6 +2,7 @@
 #include <immintrin.h> // portable to all x86 compilers
 #include <stdio.h>
 #include <string.h>
+#include <time.h>
 
 struct SimdDataParse {
   int pos;
@@ -84,6 +85,9 @@ struct Token *parse_token(struct SimdDataParse *parse) {
 }
 
 int main(int argc, char **argv) {
+  float endTime;
+  float startTime;
+  float timeElapsed;
   printf("%d\n", argc);
   if (argc < 3) {
     printf("usage: example.simd example.data\n");
@@ -142,8 +146,6 @@ int main(int argc, char **argv) {
 
         struct Token *token = parse_token(dataparse);
 
-        
-
         numbers[items] = (char)token->value;
         items++;
 
@@ -155,15 +157,22 @@ int main(int argc, char **argv) {
       // __m256i added = _mm256_add_epi8(line, line);
 
       // show(&added, "Added");
+    }
 
+    startTime = (float)clock() / CLOCKS_PER_SEC;
+
+    /* Do work */
+
+    for (int n = 0; n < datacount; n++) {
+      __m256i line = lines[n];
       __m256i cmpvector2 =
           _mm256_set_epi8(8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8,
                           8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8);
       show(&cmpvector2, "Compare vector2");
 
-      __m256i cmpvector3 =
-          _mm256_set_epi8(15, 15, 15, 15, 15, 15, 15, 15, 15, 15, 15, 15, 15, 15, 15, 15, 15, 15,
-                          15, 15, 15, 15, 15, 15, 15, 15, 15, 15, 15, 15, 15, 15);
+      __m256i cmpvector3 = _mm256_set_epi8(
+          15, 15, 15, 15, 15, 15, 15, 15, 15, 15, 15, 15, 15, 15, 15, 15, 15,
+          15, 15, 15, 15, 15, 15, 15, 15, 15, 15, 15, 15, 15, 15, 15);
       show(&cmpvector3, "Compare vector3");
 
       int mask = 8;
@@ -171,30 +180,33 @@ int main(int argc, char **argv) {
 
       comparisons[linescount++] = _mm256_cmpeq_epi8(line, cmpvector2);
       comparisons[linescount++] = _mm256_cmpeq_epi8(line, cmpvector3);
-      
+
       datacount++;
+
+      for (int x = 0; x < linescount; x++) {
+        printf("Comparison for %d\n", x);
+        show(&comparisons[x], "Comparison");
+        unsigned char buffer[sizeof(__m256i) / sizeof(unsigned char)]
+            __attribute__((__aligned__(32)));
+        _mm256_store_si256((__m256i *)buffer, comparisons[x]);
+
+        printf("Mask response\n");
+        for (int y = 0; y < 32; y++) {
+          char result = 0;
+          if (buffer[y] == 255) {
+            result = 1 << x;
+          }
+          printf("%d ", result);
+        }
+
+        printf("\n");
+        printf("\n");
+      }
     }
 
-    for (int x = 0; x < linescount; x++) {
-      printf("Comparison for %d\n", x);
-      show(&comparisons[x], "Comparison");
-      unsigned char buffer[sizeof(__m256i) / sizeof(unsigned char)]
-          __attribute__((__aligned__(32)));
-      _mm256_store_si256((__m256i *)buffer, comparisons[x]);
-  
-printf("Mask response\n");
-      for (int y = 0; y < 32; y++) {
-        char result = 0;
-         if (buffer[y] == 255) {
-           result = 1 << x;
-         }
-         printf("%d ", result);
-      }
-    
-    printf("\n");
-      printf("\n");
+    endTime = (float)clock() / CLOCKS_PER_SEC;
   }
-  }
+
   __m256i offset = _mm256_set_epi64x(8, 8, 8, 8);
   __m256i memresult = _mm256_add_epi64(offset, offset);
 
@@ -260,5 +272,7 @@ printf("Mask response\n");
 
   // vector1 = _mm_shuffle_ps(vector1, vector1, _MM_SHUFFLE(0, 1, 2, 3));
   // vector1 is now (1, 2, 3, 4) (above shuffle reversed it)
+  timeElapsed = endTime - startTime;
+  printf("Duration %f\n", timeElapsed);
   return 0;
 }
